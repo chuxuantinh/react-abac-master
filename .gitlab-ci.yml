@@ -1,0 +1,43 @@
+stages:
+    - test
+    - publish
+    - pages
+
+test:
+    stage: test
+    image: node:10.15.1-alpine
+    coverage: /All files[^|]*\|[^|]*\s+([\d\.]+)/
+    artifacts:
+        paths:
+            - coverage
+    except:
+        - tags
+    script:
+        - npm ci
+        - npm t
+
+publish:
+    stage: publish
+    image: node:10.15.1-alpine
+    only:
+        - tags
+    script:
+        # clean install
+        - npm ci
+        # ensure we have access to the npm registry
+        - echo "_auth=$NPM_AUTH_KEY" >> .npmrc
+        # publish to npm
+        - npm publish
+
+pages:
+    stage: pages
+    image: node:10.15.1-alpine
+    script:
+        - npm ci
+        - npm run build
+        - cd example && npm i && cd .. && sh link-to-example.sh && cd example && npm run build && mv build ../public
+    only:
+        - master
+    artifacts:
+        paths:
+            - public
